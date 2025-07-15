@@ -1,0 +1,29 @@
+{
+  "name": "jaypay-discord-bot",
+  "version": "1.0.0",
+  "description": "A payment reminder Discord bot with tracking and interest tracking on payment.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Leoy1/JayPay-Discord-Bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Leoy1/JayPay-Discord-Bot/issues"
+  },
+  "homepage": "https://github.com/Leoy1/JayPay-Discord-Bot#readme",
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
