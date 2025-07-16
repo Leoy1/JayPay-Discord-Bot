@@ -48,7 +48,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
         await command.execute(interaction)
     } catch (error){
         console.error(error)
-        await interaction.reply({ content: 'Error execution command.', ephemeral: true})
+        await interaction.reply({ content: 'Error execution command.', flags: 1 << 6})
     }
 })
 

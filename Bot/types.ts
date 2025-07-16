@@ -1,0 +1,1 @@
+export interface Debt{ lenderId: string; lenderName: string; borrowerId: string; borrowerName: string; amount: number; history:{amount: number; reason: string; timestamp: number;}[];}

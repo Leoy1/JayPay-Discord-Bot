@@ -1,4 +1,18 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+import fs from 'fs'
+import path from 'path'
+import { Debt } from '../types'
+
+const debtsFile = path.join(__dirname, '..', 'debts.json')
+
+function readDebts(): Debt[]{
+  if(!fs.existsSync(debtsFile)) return[]
+  return JSON.parse(fs.readFileSync(debtsFile, 'utf-8'))
+}
+
+function writeDebts(debts: Debt[]){
+  fs.writeFileSync(debtsFile, JSON.stringify(debts, null, 2))
+}
 
 export const data = new SlashCommandBuilder()
   .setName('lend')
@@ -12,7 +26,29 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const amount = interaction.options.getNumber('amount');
   const reason = interaction.options.getString('reason') || 'No reason provided';
 
-  await interaction.reply( `${interaction.user.username} lent $${amount} to ${borrower} for "${reason}".`);
+  const botUserId = interaction.client.user?.id
 
-  //TODO: Save infor in a JSON file or in-memory map
+  if(!borrower || !amount || amount <= 0 || borrower.id === interaction.user.id || borrower.id === botUserId){
+    await interaction.reply({ content: 'Invalid borrower or amount.', flags: 1 << 6})
+    return
+  }
+
+  const debts = readDebts()
+
+  const existingDebt = debts.find(debt => debt.lenderId === interaction.user.id && debt.borrowerId === borrower.id)
+
+  const newEntry = {
+    amount, reason, timestamp: Date.now(),
+  }
+
+  if(existingDebt){
+    existingDebt.amount += amount
+    existingDebt.history.push(newEntry)
+  } else{
+    debts.push({ lenderId: interaction.user.id, lenderName: interaction.user.username, borrowerId: borrower.id, borrowerName: borrower.username, amount, history: [newEntry],})
+  }
+
+  writeDebts(debts)
+
+  await interaction.reply( `${interaction.user} lent $${amount} to ${borrower} for "${reason}".`);
 }
