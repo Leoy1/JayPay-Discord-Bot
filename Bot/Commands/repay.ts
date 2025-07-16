@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { Debt } from '../types'
 import { roundToTwoDecimals } from "../format";
+import { updateCreditScore } from '../credit'
 
 const dataPath = path.join(__dirname, '..', 'debts.json')
 
@@ -55,6 +56,7 @@ export const data = new SlashCommandBuilder()
         fs.writeFileSync(dataPath, JSON.stringify(updateDebts, null, 2))
 
         if(totalRepaid > 0){
+            updateCreditScore(borrowerId, 5)
             await interaction.reply(`${interaction.user.username} repaid $${totalRepaid} to ${lender.username}.`)
         } else{
             await interaction.reply({ content: `No matching debt to repay.`, flags: 1 << 6})

@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js'
 import fs from 'fs'
 import path from 'path'
 import { Debt } from '../types'
+import { updateCreditScore } from '../credit'
 
 const dataPath = path.join(__dirname, '..', 'debts.json')
 
@@ -40,6 +41,7 @@ export async function execute(interaction: ChatInputCommandInteraction){
         }
 
         fs.writeFileSync(dataPath, JSON.stringify(debts, null, 2))
+        updateCreditScore(borrower.id, -10)
 
         await interaction.reply({ content: `Cleared debt you lent to ${borrower.username}.`, flags: 1 << 6,})
     } catch(error){

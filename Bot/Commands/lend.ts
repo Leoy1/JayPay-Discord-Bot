@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import fs from 'fs'
 import path from 'path'
 import { Debt } from '../types'
+import { readCreditScores } from '../credit'
 
 const debtsFile = path.join(__dirname, '..', 'debts.json')
 
@@ -31,6 +32,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if(!borrower || !amount || amount <= 0 || borrower.id === interaction.user.id || borrower.id === botUserId){
     await interaction.reply({ content: 'Invalid borrower or amount.', flags: 1 << 6})
     return
+  }
+
+  const creditScores = readCreditScores()
+  const borrowerScore = creditScores[borrower.id]?.score ?? 600
+
+  if(borrowerScore < 500){
+    await interaction.reply({ content: `Warning: ${borrower.username} has a lower credit score (${borrowerScore}). Proceed with caution.`, flags: 1 << 6})
   }
 
   const debts = readDebts()
