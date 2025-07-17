@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
-import { readCreditScores } from '../credit'
+import { getCreditScore, updateCreditScore } from '../lib/credit'
 
 function getScoreTier(score: number): string {
     if(score >= 700) return '🟢 Excellent'
@@ -15,11 +15,11 @@ export const data = new SlashCommandBuilder()
     .addUserOption(option => option.setName('user').setDescription("Check ano0ther user's credit score").setRequired(false))
 
 export async function execute(interaction: ChatInputCommandInteraction){
+    const guildId = interaction.guildId ?? ''
     const targetUser = interaction.options.getUser('user') || interaction.user
     const userId = targetUser.id
 
-    const scores = readCreditScores()
-    const score = scores[userId]?.score ?? 600
+    const score = getCreditScore(guildId, userId)
     const tier = getScoreTier(score)
 
     await interaction.reply({ content: `Credit score for **${targetUser.username}** is **${score}** (${tier}).`, flags: 1 << 6, })

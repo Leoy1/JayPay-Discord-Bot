@@ -140,3 +140,12 @@ vite.config.ts.timestamp-*
 
 # Debts data
 debts.json
+
+#Ignore all SQLite DB files
+*.db
+*.db-shm
+*.db-wal
+
+#Ignore all file in data folder
+/data/
+
