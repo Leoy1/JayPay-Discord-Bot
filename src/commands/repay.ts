@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import { roundToTwoDecimals } from "../lib/format"
 import db from '../lib/db'
-import { updateCreditScore } from '../lib/credit'
+import { updateCreditScore, calculatePenalty } from '../lib/credit'
 
 export const data = new SlashCommandBuilder()
     .setName('repay')
@@ -25,12 +25,10 @@ export async function execute(interaction: ChatInputCommandInteraction){
         return
     }
 
-    const selectDebtsStmt = db.prepare<[string, string, string], { id: number; amount: number }>('SELECT id, amount FROM debts WHERE guild_id = ? AND lender_id = ? AND borrower_id = ? ORDER BY id')
-
-    const debts = selectDebtsStmt.all(guildId, lender.id, borrowerId) as Array<{ id: number; amount: number }>
+    const debts = db.prepare('SELECT id, amount, due_date FROM debts WHERE guild_id = ? AND lender_id = ? AND borrower_id = ? ORDER BY id').all(guildId, lender.id, borrowerId) as Array<{ id: number; amount: number; due_date: number | null}>
 
     if(debts.length === 0){
-        await interaction.reply({ content: `You don't owe any money to ${lender.username}, so you can't repay them.`, flags: 1 << 6})
+        await interaction.reply({ content: `You don't owe any money to ${lender.username}.`, flags: 1 << 6})
         return
     }
 
@@ -46,6 +44,7 @@ export async function execute(interaction: ChatInputCommandInteraction){
 
     let remaining = amount
     let totalRepaid = 0
+    const now = Date.now()
 
     const txn = db.transaction(() => {
         for (const debt of debts) {
@@ -56,16 +55,19 @@ export async function execute(interaction: ChatInputCommandInteraction){
             if(remaining >= debt.amount){
                 repayAmount = debt.amount;
                 remaining -= debt.amount;
+
+                insertHistoryStmt.run(debt.id, -repayAmount, "Repayment", now)
                 deleteDebtStmt.run(debt.id)
             } else{
                 repayAmount = remaining;
                 const newAmount = roundToTwoDecimals(debt.amount - remaining)
                 remaining = 0
+
+                insertHistoryStmt.run(debt.id, -repayAmount, "Partial Repayment", now)
                 updateDebtStmt.run(newAmount, debt.id)
             }
 
-            totalRepaid += debt.amount
-            insertHistoryStmt.run(debt.id, -repayAmount, 'Repayment', Date.now())
+            totalRepaid += repayAmount
         }
     })
 
@@ -73,7 +75,7 @@ export async function execute(interaction: ChatInputCommandInteraction){
 
     if(totalRepaid > 0){
         updateCreditScore(guildId, borrowerId, 5)
-        await interaction.reply(`${interaction.user.username} repaid $${totalRepaid} to ${lender.username}.`)
+        await interaction.reply(`${interaction.user.username} repaid $${totalRepaid.toFixed(2)} to ${lender.username}`)
     } else{
         await interaction.reply({ content: `No matching debt to repay.`, flags: 1 << 6})
     }

@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js'
 import db from '../lib/db'
-import { updateCreditScore } from '../lib/credit'
 
 export const data = new SlashCommandBuilder()
     .setName('clear')
@@ -22,21 +21,24 @@ export async function execute(interaction: ChatInputCommandInteraction){
             return
         }
 
-        const selectDebtStmt = db.prepare('SELECT id FROM debts WHERE guild_id = ? AND lender_id = ? AND borrower_id = ?')
-        const deleteDebtStmt = db.prepare('DELETE FROM debts WHERE id = ?')
-        const deleteHistoryStmt = db.prepare('DELETE FROM debt_history WHERE debt_id = ?')
+        const debt = db.prepare(`SELECT id FROM debts WHERE guild_id = ? AND lender_id = ? AND borrower_id = ?`).get(guildId, lenderId, borrower.id) as { id: number } | undefined
 
-        const debt = selectDebtStmt.get(guildId, lenderId, borrower.id) as { id: number } | undefined
         if(!debt){
             await interaction.reply({ content: `No debt found that you lent to ${borrower.username}.`, flags: 1 << 6 })
             return
         }
 
+        const deleteDebtStmt = db.prepare('DELETE FROM debts WHERE id = ?')
+        const deleteHistoryStmt = db.prepare('DELETE FROM debt_history WHERE debt_id = ?')
+
         const txn = db.transaction(() => {deleteHistoryStmt.run(debt.id); deleteDebtStmt.run(debt.id);})
 
-        txn()
+        if(!debt){
+            await interaction.reply({ content: `No debt found that you lent to ${borrower.username}.`, flags: 1 << 6 })
+            return
+        }
 
-        updateCreditScore(guildId, borrower.id, -10)
+        txn()
 
         await interaction.reply({ content: `Cleared debt you lent to ${borrower.username}.`, flags: 1 << 6})
     } catch(error){
